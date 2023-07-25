@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.os.RemoteException
+import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.commonsware.cwac.provider.StreamProvider
@@ -26,6 +27,7 @@ import java.lang.ref.WeakReference
 class RecognitionService : Service() {
 
     // TODO: Replace with your own APP_ID and SECRET_KEY here
+    // can be found at https://console.soriapi.com/account/application/
     private val APP_ID = "64a24d06b84a40fbb21aaa6e"
     private val SECRET_KEY = "ac9741d14d837fcad50f21b18887a6628b9fe861"
 
@@ -38,7 +40,7 @@ class RecognitionService : Service() {
     /**
      * Flag to check if recognition is running
      */
-    private var detectingRunning = false
+//    private var detectingRunning = false
 
     /**
      * SoriListener는 [Detector#start] 후에 바인드합니다.
@@ -48,6 +50,7 @@ class RecognitionService : Service() {
     private val CHANNEL_ID = "iplateia_recognize_channel"
     private val CHANNEL_NAME = "iPlateia_RECOGNIZE_CHANNEL"
     override fun onBind(intent: Intent): IBinder? {
+        Log.i("Listener", "Service bound")
         return null
     }
 
@@ -131,8 +134,9 @@ class RecognitionService : Service() {
      * Detector에 마이크 설정을 합니다.
      */
     private fun prepareDetecting() {
+        // get package name
         Detector.init(APP_ID, SECRET_KEY)
-        val authority = "com.example.recognize.fileprovider"
+        val authority = "${packageName}.fileprovider"
         val provider = Uri.parse("content://$authority")
         val audioPack = provider.buildUpon()
             .appendPath(StreamProvider.getUriPrefix(authority))
@@ -173,8 +177,7 @@ class RecognitionService : Service() {
     }
 
     /**
-     * Detector의 이벤트를 처리하는 리스너
-     * ISoriListener의 구현체입니다.
+     * A listener implementation to handle events from Detector
      */
     private class SoriListener(service: RecognitionService) : ISoriListener {
         var service: WeakReference<RecognitionService>? = null
@@ -194,18 +197,20 @@ class RecognitionService : Service() {
             if (service == null) {
                 return
             }
+            service.setupNotification()
             try {
-                val lastError: Int = service.detector?.getLastError() ?: Const.ERROR_NO_ERROR
+                val lastError: Int = service.detector?.lastError ?: Const.ERROR_NO_ERROR
                 if (lastError != Const.ERROR_NO_ERROR) {
-                    service.detectingRunning = false
+                    detectingRunning = false
                     service.stopDetecting()
-                    service.setupNotification()
+                    Log.i("RecognitionService", "Service started")
                 }
 
                 Thread {
                     try {
                         Thread.sleep(UPDATE_DELAY.toLong())
                         service.detector?.updateAudiopack()
+                        Log.i("RecognitionService", "Audiopack updated")
                     } catch (e: java.lang.Exception) {
                         System.err.println(e)
                     }
@@ -228,7 +233,7 @@ class RecognitionService : Service() {
         override fun onError(err: Int) {
             val service = service!!.get() ?: return
             if (err != Const.ERROR_NO_ERROR) {
-                service.detectingRunning = false
+                detectingRunning = false
                 service.stopDetecting()
                 service.setupNotification()
             }
@@ -239,7 +244,9 @@ class RecognitionService : Service() {
          *
          * @param result 현재는 result 파라미터를 사용하지 않습니다.
          */
-        override fun onUpdateResult(result: Int) {}
+        override fun onUpdateResult(result: Int) {
+            Log.i("Listener", "Update result: $result")
+        }
 
         /**
          * 소재 발견 이벤트
@@ -285,20 +292,19 @@ class RecognitionService : Service() {
         const val NOTIFICATION_TITLE = "NOTIFICATION_TITLE"
         const val NOTIFICATION_BODY = "NOTIFICATION_BODY"
         const val REQ_START_DETECTING = 1
-
-        /**
-         * APP_ID는 iPlateia로 부터 제공받아 사용하여야 합니다.
-         * APP_ID와 SECRET_KEY는 한 쌍입니다.
-         */
-        private const val APP_ID = "5ffd4183ba482ef7f5f101cc"
-
-        /**
-         * SECRET_KEY는는 iPlateia로 부터 제공받아 사용하여야 합니다.
-         * APP_ID와 SECRET_KEY는 한 쌍입니다.
-         */
-        private const val SECRET_KEY =
-            "6111bfef8b5574cd71a9806f0582bc6b311af0a151d2672c59f1bbacdfced6a4"
         private const val NOTIF_DETECT = 3
+
+        private var detectingRunning = false
+
+        /**
+         * Singleton flag to check if recognition service is running
+         * Note: `ActivityManager::getRunningServices()` is deprecated in API 26
+         * @see [getRunningServices](https://developer.android.com/reference/android/app/ActivityManager.html#getRunningServices(int))
+         * @see [solution](https://stackoverflow.com/a/50384353)
+         */
+        val isRunning: Boolean
+            get() = detectingRunning
+
         fun setTimeout(runnable: Runnable, delay: Int) {
             Thread {
                 try {

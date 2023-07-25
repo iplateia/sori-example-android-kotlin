@@ -1,7 +1,6 @@
 package com.iplateia.sori.ExampleApp
 
 import android.Manifest
-import android.app.ActivityManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -42,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import com.iplateia.afplib.Util
 import com.iplateia.sori.ExampleApp.ui.theme.SORIExampleTheme
 
 
@@ -76,15 +76,16 @@ class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsRes
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+//        Util.setUserData(this, "sori.pref.afp_data_version", "19990101000000") // XXX
         setContent {
             RecognitionScene(
-                toggleRecognition = ::toggleRecognition
+                toggleRecognition = ::toggleRecognition // pass toggleRecognition function to RecognitionScene
             ) // render the scene
         }
     }
 
     fun startRecognitionService() {
-//        Toast.makeText(this, "Starting Audio Recognition", Toast.LENGTH_SHORT).show()
+        // Toast.makeText(this, "Starting Audio Recognition", Toast.LENGTH_SHORT).show()
         try {
             soriServiceIntent = Intent(this, RecognitionService::class.java)
             soriServiceIntent!!.putExtra(
@@ -100,9 +101,9 @@ class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     fun stopDetectingService() {
-//        Toast.makeText(this, "Stopping Audio Recognition", Toast.LENGTH_SHORT).show()
+        // Toast.makeText(this, "Stopping Audio Recognition", Toast.LENGTH_SHORT).show()
         try {
-            if (_checkServiceRunning(RecognitionService::class.java)) {
+            if (RecognitionService.isRunning) {
                 stopService(Intent(this@MainActivity, RecognitionService::class.java))
                 soriServiceIntent = null
                 return
@@ -112,19 +113,9 @@ class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsRes
         }
     }
 
-    fun _checkServiceRunning(serviceClass: Class<*>): Boolean {
-        val manager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
-        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
-            if (serviceClass.name == service.service.className) {
-                return true
-            }
-        }
-        return false
-    }
-
     fun toggleRecognition() {
         if (checkPermission()) {
-            if (_checkServiceRunning(RecognitionService::class.java)) {
+            if (RecognitionService.isRunning) {
                 stopDetectingService()
             } else {
                 // log
