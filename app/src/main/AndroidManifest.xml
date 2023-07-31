@@ -46,28 +46,28 @@
         <service
             android:name="com.iplateia.afplib.DetectorService"
             android:exported="false"
-            android:permission="${packageName}.permission.SORI.DETECT"
+            android:permission="com.iplateia.sori.example.permission.SORI.DETECT"
             android:process=":remote" />
         <service
-            android:name="com.iplateia.sori.ExampleApp.RecognitionService"
+            android:name="com.iplateia.sori.example.RecognitionService"
             android:enabled="true"
             android:exported="false" />
     </application>
     <permission
-        android:name="${packageName}.permission.SORI.DETECT"
+        android:name="com.iplateia.sori.example.permission.SORI.DETECT"
         android:protectionLevel="signature" />
-    <uses-permission android:name="${packageName}.permission.SORI.DETECT" />
+    <uses-permission android:name="com.iplateia.sori.example.permission.SORI.DETECT" />
     <permission
-        android:name="${packageName}.permission.SORI.BIND"
+        android:name="com.iplateia.sori.example.permission.SORI.BIND"
         android:protectionLevel="signature" />
-    <uses-permission android:name="${packageName}.permission.SORI.BIND" />
+    <uses-permission android:name="com.iplateia.sori.example.permission.SORI.BIND" />
     <permission
-        android:name="${packageName}.permission.permission.SORI.BROADCAST"
+        android:name="com.iplateia.sori.example.permission.permission.SORI.BROADCAST"
         android:protectionLevel="signature" />
+    <uses-permission android:name="com.iplateia.sori.example.permission.SORI.BROADCAST" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="${packageName}.permission.SORI.BROADCAST" />
 </manifest>

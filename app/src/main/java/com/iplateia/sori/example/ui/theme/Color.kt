@@ -1,4 +1,4 @@
-package com.iplateia.sori.ExampleApp.ui.theme
+package com.iplateia.sori.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

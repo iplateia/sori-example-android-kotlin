@@ -1,4 +1,4 @@
-package com.iplateia.sori.ExampleApp
+package com.iplateia.sori.example
 
 import org.junit.Test
 

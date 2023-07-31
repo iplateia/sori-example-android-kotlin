@@ -1,19 +1,22 @@
-package com.iplateia.sori.ExampleApp
+package com.iplateia.sori.example
 
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Button
@@ -39,36 +42,59 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
-import com.iplateia.afplib.Util
-import com.iplateia.sori.ExampleApp.ui.theme.SORIExampleTheme
+import com.iplateia.afplib.DetectResponse
+import com.iplateia.afplib.Result
+import com.iplateia.sori.example.ui.theme.SORIExampleTheme
+import java.lang.ref.WeakReference
 
 
 class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
 
     private var soriServiceIntent: Intent? = null
+
+    /**
+     * Foreground Service Notification title.
+     *
+     * This will be shown on the notification. Please change this to your own app name.
+     * ex) "ACME Cinema", "DOBI Tv", ...
+     */
     private val notificationTitle = "SORI Example"
+
+    /**
+     * Foreground Service Notification body.
+     *
+     * Please change this to your own message
+     * ex) "Finding rewards...", "Shhh... I'm listening" ...
+     */
     private val notificationBody = "Listening for audio..."
 
     /**
-     * Check if the app has permission to record audio
+     * Check if the app has permission to record audio and post notification
      */
     private fun checkPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
+        val recordingEnabled = ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
+
+        val notificationEnabled = NotificationManagerCompat.from(this).areNotificationsEnabled()
+
+        return recordingEnabled && notificationEnabled
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onStart() {
         super.onStart()
 
         // Check if the app has permission to record audio, and if not, request permission.
+        // Check if the app has permission to post notification, and if not, request permission.
         if (!checkPermission()) {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(Manifest.permission.RECORD_AUDIO),
+                arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS),
                 1
             )
         }
@@ -76,16 +102,18 @@ class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsRes
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        Util.setUserData(this, "sori.pref.afp_data_version", "19990101000000") // XXX
         setContent {
             RecognitionScene(
-                toggleRecognition = ::toggleRecognition // pass toggleRecognition function to RecognitionScene
+                toggleRecognition = ::toggleRecognition, // pass toggleRecognition function to RecognitionScene
             ) // render the scene
         }
     }
 
+    /**
+     * A Wrapper method of [RecognitionService#startRecognition]
+     */
     fun startRecognitionService() {
-        // Toast.makeText(this, "Starting Audio Recognition", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Starting Audio Recognition", Toast.LENGTH_SHORT).show()
         try {
             soriServiceIntent = Intent(this, RecognitionService::class.java)
             soriServiceIntent!!.putExtra(
@@ -101,7 +129,7 @@ class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     fun stopDetectingService() {
-        // Toast.makeText(this, "Stopping Audio Recognition", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Stopping Audio Recognition", Toast.LENGTH_SHORT).show()
         try {
             if (RecognitionService.isRunning) {
                 stopService(Intent(this@MainActivity, RecognitionService::class.java))
@@ -156,7 +184,7 @@ fun RecognitionResult(title: String, subTitle: String, imageUrl: String, actionU
                         shape = MaterialTheme.shapes.small
                     )
                     .fillMaxWidth()
-                    .height(150.dp)
+                    .height(200.dp)
             )
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -183,6 +211,43 @@ fun RecognitionScene(
 ) {
     val (isRunning, setIsRunning) = remember { mutableStateOf(false) }
 
+    /** The list of recognition results */
+    val results = remember { mutableStateOf(listOf<DetectResponse>()) }
+
+    /**
+     * Override [SoriListener] to handle recognition result to results closure
+     */
+    open class EventHandler : SoriListener() {
+        override fun onDetected(res: DetectResponse) {
+            super.onDetected(res)
+            Log.i("RecognitionScene", "Detected: $res")
+            results.value = results.value + res
+        }
+
+        override fun onConnected() {
+            super.onConnected()
+            Log.i("RecognitionScene", "Connected to recognition service")
+            results.value += DetectResponse().apply {
+                success = 1
+                score = -20.0f
+                position = 0.0f
+                result = Result().apply {
+                    _id = "id"
+                    type = "cf"
+                    length = 0.0f
+                    title = "title"
+                    image = "https://i.sori.io/data/sori/2b/2baa9940becd44cf9e4791734a3f29c5.png?size=1024"
+                }
+            }
+        }
+    }
+
+    /** To hold the reference of [EventHandler] */
+    var handler = EventHandler()
+
+    /** Set [handler] as a listener of [RecognitionService] */
+    RecognitionService.setListener(handler)
+
     SORIExampleTheme {
         Scaffold(
             topBar = {
@@ -198,6 +263,7 @@ fun RecognitionScene(
                     },
                 )
             },
+            floatingActionButtonPosition = androidx.compose.material3.FabPosition.Center,
             floatingActionButton = {
                 if (isRunning) {
                     Button(
@@ -222,23 +288,45 @@ fun RecognitionScene(
             }
         ) {
             Column(
-                modifier = Modifier
-                    .padding(it),
+                modifier = Modifier.padding(it), // it is the padding from Scaffold
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // TODO: change this result card by corresponding result of recognition service
-                RecognitionResult(
-                    "Item Title",
-                    "Item subtitle",
-                    imageUrl = "https://i.sori.io/data/sori/2b/2baa9940becd44cf9e4791734a3f29c5.png?size=1024",
-                    actionUrl = "https://www.iplateia.com"
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = """Recognition result will be shown here.
-                    """.trimMargin(),
-                    modifier = Modifier.padding(16.dp)
-                )
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(
+                        count = results.value.size,
+                        itemContent = { res ->
+                            RecognitionResult(
+                                "title",
+                                "subtitle",
+                                imageUrl = "https://i.sori.io/data/sori/2b/2baa9940becd44cf9e4791734a3f29c5.png?size=1024",
+                                actionUrl = "https://www.iplateia.com"
+                            )
+                        }
+                    )
+                    item {
+                        if (results.value.isEmpty()) {
+                            Text(
+                                text = "Recognition result will be shown here.",
+                                modifier = Modifier.padding(16.dp)
+                            )
+                            if (!isRunning) {
+                                Text(
+                                    text = "Please Touch 'Start Recognition' button to start recognition.",
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        }
+                        RecognitionResult(
+                            "Item Title",
+                            "Item subtitle",
+                            imageUrl = "https://i.sori.io/data/sori/2b/2baa9940becd44cf9e4791734a3f29c5.png?size=1024",
+                            actionUrl = "https://www.iplateia.com"
+                        )
+                    }
+                }
             }
         }
     }
