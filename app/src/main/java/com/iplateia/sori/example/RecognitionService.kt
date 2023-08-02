@@ -9,34 +9,23 @@ import android.net.Uri
 import android.os.IBinder
 import android.os.RemoteException
 import android.util.Log
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.commonsware.cwac.provider.StreamProvider
 import com.iplateia.afplib.Const
-import com.iplateia.afplib.DetectResponse
 import com.iplateia.afplib.Detector
 import com.iplateia.afplib.ISoriListener
-import java.lang.ref.WeakReference
-
 
 /**
- * Launch the audio recognition Foreground Service
+ * Audio recognition Foreground Service
  *
  * Show a Notification to indicate the running state.
- * Since the audio recognition service is a foreground service, it must be launched with a notification.
+ * Since service that using the audio recording should be run on a foreground service,
+ * We need to launch a service with a notification.
  *
  * This is a sample code to show how to use the audio recognition service.
  */
 class RecognitionService : Service() {
 
-    // ----
-    // TODO: Replace with your own APP_ID and SECRET_KEY here
-    // can be found at https://console.soriapi.com/account/application/
-    private val APP_ID = "64a24d06b84a40fbb21aaa6e"
-    private val SECRET_KEY = "ac9741d14d837fcad50f21b18887a6628b9fe861"
-    // ------
-
-    var builder: NotificationCompat.Builder? = null
     private var notificationTitle: String? = null
     private var notificationBody: String? = null
 
@@ -44,15 +33,8 @@ class RecognitionService : Service() {
     val lastError: Int
         get() = detector?.lastError ?: Const.ERROR_NO_ERROR
     private var soriListener: ISoriListener? = null
-    private val CHANNEL_ID = "sori_recognition"
-    private val CHANNEL_NAME = "SORI_RECOGNITION"
-
-    /**
-     * register listener to handle events from Detector
-     */
-    fun bind(listener: ISoriListener) {
-        soriListener = listener
-    }
+    private val CHANNEL_ID = "sori-sdk"
+    private val CHANNEL_NAME = "sori-sdk-channel"
 
     override fun onBind(intent: Intent): IBinder? {
         Log.i("Listener", "Service bound")
@@ -62,6 +44,7 @@ class RecognitionService : Service() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        detectingRunning = false
         prepareDetecting()
         setupNotification()
     }
@@ -89,7 +72,7 @@ class RecognitionService : Service() {
      */
     override fun onDestroy() {
         try {
-            if (isRunning) {
+            if (detectingRunning) {
                 stopRecognition()
             }
         } catch (e: Exception) {
@@ -114,12 +97,12 @@ class RecognitionService : Service() {
         )
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
             .createNotificationChannel(channel)
-        builder = NotificationCompat.Builder(this, CHANNEL_ID)
-        builder?.setSmallIcon(R.drawable.ic_sori_service)
-            ?.setContentTitle(notificationTitle)
-            ?.setContentText(notificationBody)
-            ?.setContentIntent(pendingIntent)
-        startForeground(NOTIF_DETECT, builder?.build())
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+        builder.setSmallIcon(R.drawable.ic_sori_service)
+            .setContentTitle(notificationTitle)
+            .setContentText(notificationBody)
+            .setContentIntent(pendingIntent)
+        startForeground(NOTIF_DETECT, builder.build())
     }
 
     /**
@@ -135,10 +118,20 @@ class RecognitionService : Service() {
      * Prepare recognition resource, setup keys, setup recording source...
      */
     private fun prepareDetecting() {
-        // get package name
-        Detector.init(APP_ID, SECRET_KEY)
+        // ----
+        // Replace with your own APP_ID and SECRET_KEY here
+        // or set them in res/values/secrets.xml
+        // can be found at https://console.soriapi.com/account/application/
+        val appId = getString(R.string.SORI_APP_ID)
+        val secretKey = getString(R.string.SORI_SECRET_KEY)
+        // ------
+
+        Detector.init(appId, secretKey)
         val authority = "${packageName}.fileprovider"
         val provider = Uri.parse("content://$authority")
+
+        // set audiopack uri as a content provider
+        // audiopack contains default ML data for recognition
         val audioPack = provider.buildUpon()
             .appendPath(StreamProvider.getUriPrefix(authority))
             .appendPath("audiopack/audio.pack")
@@ -156,17 +149,18 @@ class RecognitionService : Service() {
      */
     private fun startRecognition() {
         detector?.start(this)
-        val soriListener = listener?.get()
-        if (soriListener != null) {
-            detector!!.bind(this, soriListener)
+        if (listener != null) {
+            // bind listener to detector(SDK interface)
+            detector!!.bind(this, listener)
         }
+        detectingRunning = true
     }
 
     /**
      * Stops recognition service
      */
     fun stopRecognition() {
-        if (detector == null) {
+        if (detector == null || !detectingRunning) {
             return
         }
         try {
@@ -176,22 +170,17 @@ class RecognitionService : Service() {
         }
         detector!!.unbind(this)
         detector!!.terminate(this)
+        detectingRunning = false
     }
 
     /**
-     * SoriListener로부터 전달받은 인식 결과
-     *
-     * @param res 인식 결과
+     * Clear recognition state
      */
-    fun onDetected(res: DetectResponse) {
-        Toast.makeText(
-            this, """
-     소재를 찾았습니다. 
-     ${res.result.title}
-     """.trimIndent(), Toast.LENGTH_SHORT
-        ).show()
+    fun clearState() {
+        detector!!.clearState()
     }
 
+    // the Companion object for static members
     companion object {
         const val EXTRA_WHAT = "what"
         const val NOTIFICATION_TITLE = "NOTIFICATION_TITLE"
@@ -199,7 +188,7 @@ class RecognitionService : Service() {
         const val REQ_START_DETECTING = 1
         private const val NOTIF_DETECT = 3
 
-//        private var detectingRunning = false
+        private var detectingRunning = false
 
         /**
          * Singleton flag to check if recognition service is running
@@ -209,7 +198,7 @@ class RecognitionService : Service() {
          * @see [solution](https://stackoverflow.com/a/50384353)
          */
         val isRunning: Boolean
-            get() = instance != null
+            get() = detectingRunning
 
         private var instance: RecognitionService? = null
 
@@ -220,9 +209,10 @@ class RecognitionService : Service() {
             return instance
         }
 
-        private var listener: WeakReference<ISoriListener>? = null
+        private var listener: ISoriListener? = null
         fun setListener(impl: ISoriListener) {
-            listener = WeakReference(impl)
+            Log.d("RecognitionService", "setListener($impl)")
+            listener = impl
         }
     }
 }

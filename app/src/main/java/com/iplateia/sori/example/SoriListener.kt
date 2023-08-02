@@ -114,17 +114,16 @@ open class SoriListener() : ISoriListener {
      * - (String) title     : title of the campaign
      * - (String) image     : image url of the campaign. This value can be null.
      * - (String) actionUrl : action url of the campaign. Generally, this value is a web url.
-     * - (Location[]) locations: locations of the campaign. This value can be null.
+     * - (Place[]) places   : valid place of the campaign. This value can be null.
      *
-     * `Location`
-     * - (String) name         : Location Name
+     * `Place`
+     * - (String) _id          : Location ID
+     * - (String) label        : Location Name
      * - (float[]) coordinates : Location coordinates. [longitude, latitude]
      * @param res Result of detection
      */
     override fun onDetected(res: DetectResponse) {
         // implement this
         Log.d("SoriListener", "onDetected: $res");
-        val service = RecognitionService.getInstance()
-        service?.onDetected(res);
     }
 }

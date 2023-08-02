@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +33,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,9 +49,11 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.iplateia.afplib.DetectResponse
-import com.iplateia.afplib.Result
 import com.iplateia.sori.example.ui.theme.SORIExampleTheme
-import java.lang.ref.WeakReference
+import kotlinx.coroutines.launch
+import kotlin.math.acos
+import kotlin.math.cos
+import kotlin.math.sin
 
 
 class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
@@ -85,18 +90,20 @@ class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsRes
         return recordingEnabled && notificationEnabled
     }
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+//    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onStart() {
         super.onStart()
 
         // Check if the app has permission to record audio, and if not, request permission.
-        // Check if the app has permission to post notification, and if not, request permission.
+        var permissions = arrayOf(Manifest.permission.RECORD_AUDIO)
+
+        // if api version is upper than tiramisu, we need to acquire post notification permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions += Manifest.permission.POST_NOTIFICATIONS
+        }
+
         if (!checkPermission()) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS),
-                1
-            )
+            ActivityCompat.requestPermissions(this, permissions, 1)
         }
     }
 
@@ -158,10 +165,44 @@ class MainActivity : ComponentActivity(), ActivityCompat.OnRequestPermissionsRes
 }
 
 /**
+ * Calculate distance between two geo points
+ * @param lat1 latitude of point 1
+ * @param lon1 longitude of point 1
+ * @param lat2 latitude of point 2
+ * @param lon2 longitude of point 2
+ * @return distance in meters
+ */
+fun calculateGeoDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    val theta = lon1 - lon2
+    var dist =
+        sin(Math.toRadians(lat1)) * sin(Math.toRadians(lat2)) + cos(
+            Math.toRadians(
+                lat1
+            )
+        ) * cos(Math.toRadians(lat2)) * cos(Math.toRadians(theta))
+    dist = acos(dist)
+    dist = Math.toDegrees(dist)
+    // covert to meters
+    dist *= 60 * 1.1515 * 1.609344
+    return dist
+}
+
+/**
+ * Check if the geo point of item is within the range
+ * @param item the item to check
+ * @param range the range in meters (default=50 m)
+ * @return true if the item is within the range
+ */
+fun isGeoWithin(item: Object, range: Float = 50.0f): Boolean {
+    // TODO: implement this after item spec is ready
+    return false
+}
+
+/**
  * Card UI for recognition result
  */
 @Composable
-fun RecognitionResult(title: String, subTitle: String, imageUrl: String, actionUrl: String) {
+fun RecognizedItemCard(title: String, subTitle: String?, imageUrl: String, actionUrl: String) {
     val uriHandler = LocalUriHandler.current
     Card(
         Modifier
@@ -194,10 +235,11 @@ fun RecognitionResult(title: String, subTitle: String, imageUrl: String, actionU
                     fontWeight = FontWeight.Bold,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    text = subTitle,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (subTitle != null)
+                    Text(
+                        text = subTitle,
+                        overflow = TextOverflow.Ellipsis,
+                    )
             }
         }
     }
@@ -211,38 +253,36 @@ fun RecognitionScene(
 ) {
     val (isRunning, setIsRunning) = remember { mutableStateOf(false) }
 
-    /** The list of recognition results */
-    val results = remember { mutableStateOf(listOf<DetectResponse>()) }
+    /** The list of recognition responses */
+    val items = remember { mutableStateOf(listOf<DetectResponse>()) }
+
+    /** The state of [LazyColumn] */
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
 
     /**
-     * Override [SoriListener] to handle recognition result to results closure
+     * Override [SoriListener] to handle recognition result
      */
     open class EventHandler : SoriListener() {
         override fun onDetected(res: DetectResponse) {
             super.onDetected(res)
-            Log.i("RecognitionScene", "Detected: $res")
-            results.value = results.value + res
+            // add result to results
+            items.value = items.value + res
+
+            // scroll to top
+            coroutineScope.launch {
+                listState.animateScrollToItem(index = items.value.size - 1)
+            }
         }
 
         override fun onConnected() {
             super.onConnected()
             Log.i("RecognitionScene", "Connected to recognition service")
-            results.value += DetectResponse().apply {
-                success = 1
-                score = -20.0f
-                position = 0.0f
-                result = Result().apply {
-                    _id = "id"
-                    type = "cf"
-                    length = 0.0f
-                    title = "title"
-                    image = "https://i.sori.io/data/sori/2b/2baa9940becd44cf9e4791734a3f29c5.png?size=1024"
-                }
-            }
+            setIsRunning(true)  // change button state
         }
     }
 
-    /** To hold the reference of [EventHandler] */
+    /** instance of [EventHandler] */
     var handler = EventHandler()
 
     /** Set [handler] as a listener of [RecognitionService] */
@@ -261,6 +301,24 @@ fun RecognitionScene(
                             )
                         }
                     },
+                    actions = {
+                        IconButton(
+                            enabled = isRunning,
+                            onClick = {
+                            // clear recognition state
+                            // because SoriSDK remembers the last state so we need to clear it
+                            // for recognize same item again
+                            RecognitionService.getInstance()?.clearState()
+
+                            // clear results to redraw the list
+                            items.value = listOf()
+                        }) {
+                            Icon(
+                                Icons.Outlined.Refresh,
+                                contentDescription = "Clear state"
+                            )
+                        }
+                    }
                 )
             },
             floatingActionButtonPosition = androidx.compose.material3.FabPosition.Center,
@@ -272,7 +330,7 @@ fun RecognitionScene(
                         ),
                         onClick = {
                             toggleRecognition()
-                            setIsRunning(false)
+                            setIsRunning(false) // change button state
                         }
                     ) {
                         Text("Stop Recognition")
@@ -280,7 +338,6 @@ fun RecognitionScene(
                 } else {
                     Button(onClick = {
                         toggleRecognition()
-                        setIsRunning(true)
                     }) {
                         Text("Start Recognition")
                     }
@@ -291,27 +348,19 @@ fun RecognitionScene(
                 modifier = Modifier.padding(it), // it is the padding from Scaffold
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // TODO: change this result card by corresponding result of recognition service
                 LazyColumn(
+                    state = listState,
+                    reverseLayout = true,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    items(
-                        count = results.value.size,
-                        itemContent = { res ->
-                            RecognitionResult(
-                                "title",
-                                "subtitle",
-                                imageUrl = "https://i.sori.io/data/sori/2b/2baa9940becd44cf9e4791734a3f29c5.png?size=1024",
-                                actionUrl = "https://www.iplateia.com"
-                            )
-                        }
-                    )
+                    // render the guide text if there is no result
                     item {
-                        if (results.value.isEmpty()) {
+                        if (items.value.isEmpty()) {
                             Text(
                                 text = "Recognition result will be shown here.",
                                 modifier = Modifier.padding(16.dp)
                             )
+                            // show the guide text if the recognition is not running
                             if (!isRunning) {
                                 Text(
                                     text = "Please Touch 'Start Recognition' button to start recognition.",
@@ -319,13 +368,19 @@ fun RecognitionScene(
                                 )
                             }
                         }
-                        RecognitionResult(
-                            "Item Title",
-                            "Item subtitle",
-                            imageUrl = "https://i.sori.io/data/sori/2b/2baa9940becd44cf9e4791734a3f29c5.png?size=1024",
-                            actionUrl = "https://www.iplateia.com"
-                        )
                     }
+                    items(
+                        count = items.value.size,
+                        itemContent = { res ->
+                            val item = items.value[res]
+                            RecognizedItemCard(
+                                item.result.title,
+                                subTitle = null,
+                                imageUrl = item.result.image,
+                                actionUrl = "https://www.iplateia.com"
+                            )
+                        }
+                    )
                 }
             }
         }

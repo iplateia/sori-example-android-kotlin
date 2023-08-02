@@ -62,7 +62,7 @@
         android:protectionLevel="signature" />
     <uses-permission android:name="com.iplateia.sori.example.permission.SORI.BIND" />
     <permission
-        android:name="com.iplateia.sori.example.permission.permission.SORI.BROADCAST"
+        android:name="com.iplateia.sori.example.permission.SORI.BROADCAST"
         android:protectionLevel="signature" />
     <uses-permission android:name="com.iplateia.sori.example.permission.SORI.BROADCAST" />
 
