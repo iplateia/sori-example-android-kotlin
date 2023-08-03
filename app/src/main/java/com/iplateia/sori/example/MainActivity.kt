@@ -9,7 +9,6 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -373,11 +372,12 @@ fun RecognitionScene(
                         count = items.value.size,
                         itemContent = { res ->
                             val item = items.value[res]
+
                             RecognizedItemCard(
-                                item.result.title,
+                                item.campaign.title,
                                 subTitle = null,
-                                imageUrl = item.result.image,
-                                actionUrl = "https://www.iplateia.com"
+                                imageUrl = item.campaign.image,
+                                actionUrl = item.campaign.action_url
                             )
                         }
                     )
