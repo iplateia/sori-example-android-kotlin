@@ -88,7 +88,7 @@ dependencies {
     implementation 'com.google.guava:guava:23.3-android'
     implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
     implementation 'com.commonsware.cwac:provider:0.5.3'
-    implementation files('libs/SoriSDK.aar')
+    implementation files('libs/sori_sdk.aar')
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
