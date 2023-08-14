@@ -5,7 +5,7 @@ You can use this example to build your own audio recognition service from scratc
 
 ## How to build
 
-Request your APP_ID and APP_KEY from [SORI Console Site](https://console.soriapi.com/application/).
+Request your APP_ID and APP_KEY from [SORI Console Site](https://console.soriapi.com/account/application/).
 Then, put your APP_ID and APP_KEY in `app/src/main/res/values/secrets.xml` file.
 
 ```xml
