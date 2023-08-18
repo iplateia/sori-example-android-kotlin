@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    env:
+      SORI_APP_ID: ${{ secrets.SORI_APP_ID }}
+      SORI_SECRET_KEY: ${{ secrets.SORI_SECRET_KEY }}
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: set up JDK
+      uses: actions/setup-java@v3
+      with:
+        java-version: '18'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Replace appId and secretKey
+      run: |
+        sed -i 's@PUT_YOUR_APP_ID_HERE@'$SORI_APP_ID'@g' app/src/main/res/values/secrets.xml
+        sed -i 's@PUT_YOUR_SECRET_KEY_HERE@'$SORI_SECRET_KEY'@g' app/src/main/res/values/secrets.xml
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    - name: Build with Gradle
+      run: ./gradlew assembleDebug
