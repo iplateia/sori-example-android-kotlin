@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -258,6 +259,7 @@ fun RecognitionScene(
     /** The state of [LazyColumn] */
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     /**
      * Override [SoriListener] to handle recognition result
@@ -267,6 +269,9 @@ fun RecognitionScene(
             super.onDetected(res)
             // add result to results
             items.value = items.value + res
+
+            // show toast
+            Toast.makeText(context,"Detected: ${res.campaign.name}", Toast.LENGTH_SHORT).show()
 
             // scroll to top
             coroutineScope.launch {
