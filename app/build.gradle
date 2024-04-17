@@ -11,7 +11,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace 'com.iplateia.sori.example'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.iplateia.sori.example"
