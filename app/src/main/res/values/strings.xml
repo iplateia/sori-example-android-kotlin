@@ -1,3 +1,8 @@
 <resources>
-    <string name="app_name">SORI Example</string>
+    <string name="app_name">SORIExample</string>
+    <string name="app_title">SORI Example</string>
+    <string name="help_message">
+        To start audio recognition, press the mic button below.
+    </string>
+    <string name="clear_state">Clear state</string>
 </resources>
