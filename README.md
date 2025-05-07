@@ -1,18 +1,29 @@
 # SORI Example
 
 This is a sample source code of how to implement SORI SDK in your project in Kotlin.
-You can use this example to build your own audio recognition service from scratch.
+You can get inspired by this example to build your own audio recognition service.
+Please note that this is a sample code and not a production-ready code. Only for educational purposes.
+
 
 ## How to build
 
-Request your APP_ID and APP_KEY from [SORI Console Site](https://console.soriapi.com/account/application/).
-Then, put your APP_ID and APP_KEY in `app/src/main/res/values/secrets.xml` file.
+Request your application id and secret key from [SORI Console Site](https://console.soriapi.com/account/application/).
+Then, put your `SORI_APP_ID` and `SORI_SECRET_KEY` in local.properties file.
+Please start with rename `local.properties.dist` to `local.properties` and put your information in it.
 
-```xml
-<string name="SORI_APP_ID">PUT_YOUR_APP_ID_HERE</string>
-<string name="SORI_SECRET_KEY">PUT_YOUR_SECRET_KEY_HERE</string>
+```properties
+SORI_APP_ID="YOUR_APP_ID_HERE"
+SORI_SECRET_KEY="YOUR_SECRET_KEY_HERE"
 ```
 
-If you want to build release version, you should put your signing key information in `app/key.properties` file.
-And .jks file should be located in valid location.
+This will hydrate the `SORI_APP_ID` and `SORI_SECRET_KEY` variables into the resource strings at build time.
+So, you can account for them in your code as follows:
 
+```kotlin
+sori = SORIAudioRecognizer(
+    getString(R.string.SORI_APP_ID),
+    getString(R.string.SORI_SECRET_KEY),
+)
+```
+
+Or manage your secret key in your own way. like using environment variables or other secret management tools.
