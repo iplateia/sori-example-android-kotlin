@@ -1,0 +1,37 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="12dp">
+
+    <ImageView
+        android:id="@+id/campaign_image"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginEnd="12dp"
+        android:contentDescription="thumbnail of campaign"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_launcher_foreground" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/campaign_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="타이틀"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/campaign_description"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="설명 텍스트"
+            android:textSize="14sp" />
+    </LinearLayout>
+</LinearLayout>

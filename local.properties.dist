@@ -1,0 +1,5 @@
+# This file should *NOT* be checked into Version Control Systems,
+# as it contains information specific to your local configuration.
+
+SORI_APP_ID="YOUR_APP_ID_HERE"
+SORI_SECRET_KEY="YOUR_SECRET_KEY_HERE"
