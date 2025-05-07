@@ -103,6 +103,26 @@ class MainActivity : AppCompatActivity() {
 
         sori.setListener(this, listener)
 
+        // Inject user's metadata if needed
+        // providing a custom metadata provider is optional
+        // if you set a custom metadata provider, the values you provide will passed to the webhook
+        // through the SORI API Server, and you can use them in your webhook
+        // for example, you can use them to identify the user who is using the app
+        // and give them a personalized rewards, etc.
+        // Please uncomment the following lines to use a custom metadata provider
+        //
+        // val metadataProvider = object: ISORIMetadataProvider() {
+        //     fun getMetadata(): Map<String, String> {
+        //         // This is where you can inject user's metadata
+        //         return mapOf(
+        //             "user_id" to "123456",
+        //             "user_name" to "John Doe",
+        //             "user_email" to "john.doe@example.com"
+        //         )
+        //     }
+        // }
+        // sori.setMetadataProvider(this, metadataProvider)
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
