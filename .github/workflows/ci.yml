@@ -16,13 +16,31 @@ jobs:
       SORI_SECRET_KEY: ${{ secrets.SORI_SECRET_KEY }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: set up JDK
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '18'
         distribution: 'temurin'
         cache: gradle
+    - name: Set up Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          gradle-${{ runner.os }}-
+
+    - name: Replace SORI_APP_ID and SORI_SECRET_KEY in local.properties
+      run: |
+        echo "SORI_APP_ID=${{ secrets.SORI_APP_ID }}" >> local.properties
+        echo "SORI_SECRET_KEY=${{ secrets.SORI_SECRET_KEY }}" >> local.properties
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
