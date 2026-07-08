@@ -1,6 +1,5 @@
 plugins {
     id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
 }
 
 def keystoreProperties = new Properties()
@@ -32,8 +31,8 @@ android {
         }
 
         // set SORI_APP_ID and SORI_SECRET_KEY from local.properties
-        def soriAppId = localProperties['SORI_APP_ID']
-        def soriSecretKey = localProperties['SORI_SECRET_KEY']
+        def soriAppId = localProperties.getProperty('SORI_APP_ID', '')
+        def soriSecretKey = localProperties.getProperty('SORI_SECRET_KEY', '')
         resValue("string", "SORI_APP_ID", soriAppId)
         resValue("string", "SORI_SECRET_KEY", soriSecretKey)
     }
@@ -63,10 +62,8 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = '11'
-    }
     buildFeatures {
+        resValues = true
         viewBinding = true
     }
     packagingOptions {
