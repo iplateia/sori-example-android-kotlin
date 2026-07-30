@@ -28,7 +28,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: CampaignAdapter
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
-    private lateinit var sori: SORIAudioRecognizer
+    private var sori: SORIAudioRecognizer? = null
+    private var credentialsConfigured = false
 
     /**
      * Checks necessary permissions for the audio recognition service.
@@ -66,7 +67,7 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
 
         // Check if the app has the necessary permissions and request them if not
-        if (!checkPermission()) {
+        if (credentialsConfigured && !checkPermission()) {
             try {
                 requestPermission()
             } catch (e: Exception) {
@@ -78,30 +79,33 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize the SORI SDK with the app ID and secret key
-        sori = SORIAudioRecognizer(
-            getString(R.string.SORI_APP_ID),
-            getString(R.string.SORI_SECRET_KEY),
-        )
+        val appId = getString(R.string.SORI_APP_ID)
+        val secretKey = getString(R.string.SORI_SECRET_KEY)
+        credentialsConfigured = SoriCredentialConfiguration.isLocallyConfigured(appId, secretKey)
 
-        // Prepare listener for events
-        val listener = object : SORIListener() {
-            override fun onStateChanged(state: String) {
-                println("State changed: $state")
+        if (credentialsConfigured) {
+            // Initialize the SORI SDK only after the local configuration passes the preflight check.
+            sori = SORIAudioRecognizer(appId, secretKey).also { recognizer ->
+                // Prepare listener for events
+                val listener = object : SORIListener() {
+                    override fun onStateChanged(state: String) {
+                        println("State changed: $state")
 
-                // update the FAB based on the current state
-                updateFab(state)
-            }
-            override fun onCampaignFound(campaign: SORICampaign) {
-                println("Campaign found: ${campaign.name}")
-                adapter.addItem(campaign)
+                        // update the FAB based on the current state
+                        updateFab(state)
+                    }
+                    override fun onCampaignFound(campaign: SORICampaign) {
+                        println("Campaign found: ${campaign.name}")
+                        adapter.addItem(campaign)
 
-                // hide guide text if any campaign is found
-                findViewById<TextView>(R.id.guide_text).visibility = View.GONE
+                        // hide guide text if any campaign is found
+                        findViewById<TextView>(R.id.guide_text).visibility = View.GONE
+                    }
+                }
+
+                recognizer.setListener(this, listener)
             }
         }
-
-        sori.setListener(this, listener)
 
         // Inject user's metadata if needed
         // providing a custom metadata provider is optional
@@ -138,6 +142,10 @@ class MainActivity : AppCompatActivity() {
         adapter = CampaignAdapter(mutableListOf())
         campaignTimeline.adapter = adapter
         campaignTimeline.layoutManager = LinearLayoutManager(this)
+
+        if (!credentialsConfigured) {
+            findViewById<TextView>(R.id.guide_text).setText(R.string.sori_credentials_required)
+        }
     }
 
 
@@ -151,7 +159,7 @@ class MainActivity : AppCompatActivity() {
             ServiceState.STARTED -> {
                 binding.fab.setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
                 binding.fab.setOnClickListener { view ->
-                    sori.stopRecognition(this)
+                    sori?.stopRecognition(this)
                     Snackbar.make(view, "Stop recognition...", Snackbar.LENGTH_SHORT)
                         .setAnchorView(R.id.fab).show()
                 }
@@ -159,9 +167,17 @@ class MainActivity : AppCompatActivity() {
             else -> {
                 binding.fab.setImageResource(android.R.drawable.ic_btn_speak_now)
                 binding.fab.setOnClickListener { view ->
-                    sori.startRecognition(this)
-                    Snackbar.make(view, "Start recognition...", Snackbar.LENGTH_SHORT)
-                        .setAnchorView(R.id.fab).show()
+                    if (credentialsConfigured) {
+                        sori?.startRecognition(this)
+                        Snackbar.make(view, "Start recognition...", Snackbar.LENGTH_SHORT)
+                            .setAnchorView(R.id.fab).show()
+                    } else {
+                        Snackbar.make(
+                            view,
+                            R.string.sori_credentials_required,
+                            Snackbar.LENGTH_LONG,
+                        ).setAnchorView(R.id.fab).show()
+                    }
                 }
             }
         }

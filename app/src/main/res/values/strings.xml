@@ -4,5 +4,9 @@
     <string name="help_message">
         To start audio recognition, press the mic button below.
     </string>
+    <string name="sori_credentials_required">
+        Valid SORI credentials are required. Copy local.properties.dist to local.properties in the
+        project root, replace SORI_APP_ID and SORI_SECRET_KEY with real values, then rebuild the app.
+    </string>
     <string name="clear_state">Clear state</string>
 </resources>
