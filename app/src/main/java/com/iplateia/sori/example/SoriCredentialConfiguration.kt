@@ -27,7 +27,6 @@ internal object SoriCredentialConfiguration {
     private val appIdPlaceholderPatterns = setOf(
         "EXAMPLE_APP_ID",
         "SAMPLE_APP_ID",
-        "SORI_APP_ID",
         "YOUR_APP_ID",
     )
 
@@ -43,7 +42,6 @@ internal object SoriCredentialConfiguration {
     private val secretKeyPlaceholderPatterns = setOf(
         "EXAMPLE_SECRET_KEY",
         "SAMPLE_SECRET_KEY",
-        "SORI_SECRET_KEY",
         "YOUR_SECRET_KEY",
     )
 

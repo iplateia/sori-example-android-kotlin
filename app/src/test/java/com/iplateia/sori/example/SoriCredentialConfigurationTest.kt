@@ -62,5 +62,11 @@ class SoriCredentialConfigurationTest {
                 "locally-configured-secret",
             ),
         )
+        assertTrue(
+            SoriCredentialConfiguration.isLocallyConfigured(
+                "production-sori-app-id-123",
+                "production-sori-secret-key-123",
+            ),
+        )
     }
 }
