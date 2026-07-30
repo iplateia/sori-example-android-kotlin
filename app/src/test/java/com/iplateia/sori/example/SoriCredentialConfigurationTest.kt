@@ -32,6 +32,29 @@ class SoriCredentialConfigurationTest {
     }
 
     @Test
+    fun rejectsPatternedPlaceholderValues() {
+        assertFalse(SoriCredentialConfiguration.isLocallyConfigured("TODO", "secret-value"))
+        assertFalse(
+            SoriCredentialConfiguration.isLocallyConfigured(
+                "replace-with-your-app-id",
+                "secret-value",
+            ),
+        )
+        assertFalse(
+            SoriCredentialConfiguration.isLocallyConfigured(
+                "YOUR_APP_ID_HERE_123",
+                "secret-value",
+            ),
+        )
+        assertFalse(
+            SoriCredentialConfiguration.isLocallyConfigured(
+                "app-id",
+                "replace-with-your-secret-key",
+            ),
+        )
+    }
+
+    @Test
     fun acceptsNonPlaceholderValuesWithoutClaimingServerValidity() {
         assertTrue(
             SoriCredentialConfiguration.isLocallyConfigured(
