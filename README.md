@@ -26,4 +26,11 @@ sori = SORIAudioRecognizer(
 )
 ```
 
-Or manage your secret key in your own way. like using environment variables or other secret management tools.
+The ignored `local.properties` file prevents accidental source-control
+disclosure, but build-time injection does not make a client credential
+unextractable from an APK. Use this resource-based flow only for local,
+non-distributed evaluation with application-specific credentials; this
+educational sample is not production-ready. Apply protection and rotation
+appropriate to your platform and deployment. No client-side packaging or
+obfuscation measure can guarantee perfect secrecy. Revoke and reissue any
+exposed credential.
